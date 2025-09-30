@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Principal - Eng Process & Quality</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+      :root{--bg:#0f172a;--panel:#111827;--muted:#1f2937;--card:#0b1220;--text:#e5e7eb;--accent:#22d3ee;--accent2:#a78bfa;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:16px;}
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;background:linear-gradient(120deg,#0b1020,#0a1328);color:var(--text);display:grid;grid-template-areas:"header header" "sidebar main";grid-template-columns:280px 1fr;grid-template-rows:auto 1fr;gap:0; height: 100vh; overflow: hidden;}
+      header{grid-area:header;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(90deg,#0b1020,#0a1a35);border-bottom:1px solid #1e293b;}
+      .header-title h1{margin:0;font-size:20px;letter-spacing:.4px;color:var(--text);}.header-title .subtitle{margin:4px 0 0 0;font-size:14px;font-weight:normal;color:var(--accent);}
+      button, .btn{background:var(--muted);color:var(--text);border:1px solid #243041;border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:var(--shadow);transition:.2s;font-weight:600; display:inline-flex; align-items:center; gap: 8px;}
+      button:hover, .btn:hover{transform:translateY(-1px);border-color:#334155}
+      button.primary, .btn.primary{background:linear-gradient(180deg,#0ea5e9,#2563eb);border-color:transparent}
+      aside{grid-area:sidebar;border-right:1px solid #1f2937;background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:16px; overflow-y:auto;}
+      aside .aside-header { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--muted); }
+      aside .aside-header .icon { font-size: 32px; color: var(--accent); }
+      aside .aside-header div { display: flex; flex-direction: column; }
+      aside .aside-header h3 { margin: 0; font-size: 16px; color: var(--text); }
+      aside .aside-header p { margin: 2px 0 0 0; font-size: 12px; color: #9ca3af; }
+      aside h4 { color: var(--accent2); margin: 16px 0 8px 0; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding-left: 12px; }
+      .menu{display:flex;flex-direction:column;gap:4px}
+      .menu a{display:flex;gap:12px;align-items:center;text-decoration:none;color:#cbd5e1;padding:10px 12px;border:1px solid transparent;border-radius:10px;background:transparent;cursor:pointer; transition: .2s;}
+      .menu a:hover, .menu a.active{background:rgba(34,211,238,.08);color:#e2e8f0}
+      .menu a i { font-size: 18px; }
+      main{grid-area:main;padding:0; display:flex; flex-direction:column; background-color: var(--bg);}
+      .hidden{display:none !important}
+      .welcome-screen{padding:40px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;}
+      .welcome-screen i {font-size: 60px; color: var(--accent); opacity: 0.5;}
+      .welcome-screen h2 {margin-top:20px;}
+      .welcome-screen p {color: #9ca3af; max-width: 450px;}
+      iframe{flex-grow:1;width:100%;height:100%;border:none;}
+      .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:100;display:flex;justify-content:center;align-items:center;}
+      .modal-content{background:var(--bg);padding:24px;border-radius:16px;width:90%;max-width:400px;border:1px solid var(--muted);text-align:center;}
+      .field{display:flex;flex-direction:column;gap:6px;text-align:left;} label{font-size:12px;color:#93c5fd}
+      input{background:#0b1220;border:1px solid #243041;color:var(--text);padding:10px 12px;border-radius:10px;outline:none;font-family:inherit;font-size:14px;min-height:44px}
+    </style>
+</head>
+<body>
+    <div id="app-container" class="hidden">
+        <header>
+            <div class="header-title">
+                <h1>Painel Principal</h1>
+                <p class="subtitle">Engenharia de Processos & Qualidade</p>
+            </div>
+            <div class="actions">
+                <span style="font-size:14px;color:#9ca3af;">Usuário: <strong id="current-user-display" style="color:var(--accent)"></strong></span>
+                <button id="btn-logout" class="btn ghost" style="padding: 5px 10px; font-size:12px;">Sair</button>
+            </div>
+        </header>
+        
+        <aside id="main-menu">
+             </aside>
+
+        <main>
+            <iframe id="tool-iframe" name="tool-iframe"></iframe>
+        </main>
+    </div>
+
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h3>Bem-vindo ao Painel Principal</h3>
+            <p style="font-size: 14px; color: #94a3b8;">Por favor, identifique-se para acessar as ferramentas.</p>
+            <form id="login-form" style="margin-top:12px;">
+                <div class="field">
+                    <label for="user-name-input">Seu Nome</label>
+                    <input id="user-name-input" type="text" required>
+                </div>
+                <button type="submit" class="btn primary" style="width: 100%; margin-top: 15px;">Entrar</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const USER_KEY = 'painelPrincipalCurrentUser';
+
+        const SECTIONS = [
+            {
+                title: "Geral",
+                tools: [
+                    { name: 'Início', file: 'about:blank', icon: 'ph-house' },
+                    { name: 'Manual do Usuário', file: 'manual.html', icon: 'ph-book-open' }
+                ]
+            },
+            {
+                title: "Análise de Processos",
+                tools: [
+                    { name: 'Cronoanálise MTM', file: 'cronoanalise.html', icon: 'ph-timer' },
+                    { name: 'Histograma', file: 'histograma.html', icon: 'ph-chart-bar-horizontal' },
+                    { name: 'Diagrama de Dispersão', file: 'diagrama-dispersao.html', icon: 'ph-chart-scatter' },
+                    { name: 'Diagrama de Pareto', file: 'pareto.html', icon: 'ph-chart-bar' }
+                ]
+            },
+            {
+                title: "Análise Estratégica",
+                tools: [
+                    { name: 'Matriz GUT', file: 'matriz-gut.html', icon: 'ph-warning-octagon' },
+                    { name: 'Esforço x Impacto', file: 'matriz-esforco-impacto.html', icon: 'ph-scales' },
+                    { name: 'Dashboard KPIs', file: 'Gerenciador de Dashboards.html', icon: 'ph-trello-logo' }
+                ]
+            },
+            {
+                title: "Qualidade Assegurada",
+                tools: [
+                    { name: 'Checklist 5S', file: '5s.html', icon: 'ph-check-square-offset' },
+                    { name: '8D', file: '8d.html', icon: 'ph-bookmarks' },
+                    { name: '5 Porquês', file: '5_porques.html', icon: 'ph-question' }
+                ]
+            },
+            {
+                title: "Processos Específicos",
+                tools: [
+                    { name: 'Controle Injeção Plástica', file: 'controle_injecao.html', icon: 'ph-gear-six' }
+                ]
+            }
+        ];
+
+        const loginModal = document.getElementById('login-modal');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const userNameInput = document.getElementById('user-name-input');
+        const currentUserDisplay = document.getElementById('current-user-display');
+        const toolMenuContainer = document.getElementById('main-menu');
+        const toolIframe = document.getElementById('tool-iframe');
+
+        const setCurrentUser = (name) => {
+            localStorage.setItem(USER_KEY, name);
+            currentUserDisplay.textContent = name;
+            loginModal.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+        };
+
+        const renderSidebarMenu = () => {
+            toolMenuContainer.innerHTML = ''; 
+
+            const header = document.createElement('div');
+            header.className = 'aside-header';
+            header.innerHTML = `
+                <i class="ph-bold ph-rocket-launch icon"></i>
+                <div><h3>Eng Process & Quality</h3><p>Desenvolvido por Marcos Garçon</p></div>
+            `;
+            toolMenuContainer.appendChild(header);
+
+            SECTIONS.forEach(section => {
+                const title = document.createElement('h4');
+                title.textContent = section.title;
+                toolMenuContainer.appendChild(title);
+
+                const menu = document.createElement('div');
+                menu.className = 'menu';
+
+                section.tools.forEach(tool => {
+                    const link = document.createElement('a');
+                    link.href = tool.file;
+                    link.target = "tool-iframe";
+                    link.innerHTML = `<i class="ph ${tool.icon}"></i> <span>${tool.name}</span>`;
+                    
+                    if (tool.name === 'Início') {
+                        link.classList.add('active');
+                    }
+                    
+                    link.addEventListener('click', (e) => {
+                        document.querySelectorAll('.menu a').forEach(a => a.classList.remove('active'));
+                        e.currentTarget.classList.add('active');
+                        if(tool.file === 'about:blank' || tool.file === '#'){
+                             e.preventDefault();
+                             showWelcomeScreen();
+                        }
+                    });
+                    menu.appendChild(link);
+                });
+                toolMenuContainer.appendChild(menu);
+            });
+        };
+        
+        const showWelcomeScreen = () => {
+            toolIframe.src = 'about:blank';
+            toolIframe.onload = () => {
+                try {
+                    const iframeDoc = toolIframe.contentDocument || toolIframe.contentWindow.document;
+                    if (!iframeDoc) return;
+                    iframeDoc.open();
+                    iframeDoc.write(`
+                        <html><head><style>
+                            :root{--bg:#0f172a; --text:#e5e7eb; --accent:#22d3ee;}
+                            body{margin:0;font-family:system-ui;background-color:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:center;height:100vh;}
+                            .welcome-screen{text-align:center;}.welcome-screen i{font-size:60px;color:var(--accent);opacity:0.5;}
+                            .welcome-screen h2{margin-top:20px; color:var(--accent)} .welcome-screen p{color:#9ca3af;max-width:450px;}
+                        </style><script src="https://unpkg.com/@phosphor-icons/web"><\/script></head>
+                        <body>
+                            <div class="welcome-screen">
+                                 <i class="ph-bold ph-rocket-launch"></i>
+                                 <h2>Bem-vindo ao seu Painel de Ferramentas!</h2>
+                                 <p>Selecione uma ferramenta no menu à esquerda para começar a trabalhar.</p>
+                            </div>
+                        </body></html>
+                    `);
+                    iframeDoc.close();
+                } catch(e) {
+                    console.error("Erro ao acessar o iframe, possivelmente por restrições de segurança ao rodar localmente.", e);
+                }
+            };
+        };
+
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const name = userNameInput.value.trim();
+            if (name) {
+                setCurrentUser(name);
+                renderSidebarMenu();
+                showWelcomeScreen();
+            }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            localStorage.removeItem(USER_KEY);
+            window.location.reload();
+        });
+
+        const savedUser = localStorage.getItem(USER_KEY);
+        if (savedUser) {
+            setCurrentUser(savedUser);
+            renderSidebarMenu();
+            showWelcomeScreen();
+        } else {
+            loginModal.classList.remove('hidden');
+        }
+    });
+    </script>
+</body>
+</html>
